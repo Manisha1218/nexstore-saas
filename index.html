@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NexStore - Modern E-Commerce</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0f0f0f;
+            --bg-card: #1a1a1a;
+            --bg-elevated: #242424;
+            --fg: #ffffff;
+            --fg-muted: #888888;
+            --accent: #ff6b35;
+            --accent-dim: rgba(255, 107, 53, 0.15);
+            --success: #22c55e;
+            --danger: #ef4444;
+            --border: #2a2a2a;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--fg);
+            min-height: 100vh;
+        }
+        h1, h2, h3, h4, h5, h6 { font-family: 'Space Grotesk', sans-serif; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg); }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--fg-muted); }
+
+        /* Components */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+        .card:hover { border-color: #333; transform: translateY(-2px); }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+            font-weight: 600;
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Space Grotesk', sans-serif;
+        }
+        .btn-primary:hover { opacity: 0.9; transform: scale(1.02); }
+
+        .btn-secondary {
+            background: var(--bg-elevated);
+            color: var(--fg);
+            font-weight: 500;
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+        .input-field {
+            background: var(--bg);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 14px;
+            color: var(--fg);
+            width: 100%;
+            transition: all 0.2s;
+        }
+        .input-field:focus { outline: none; border-color: var(--accent); }
+
+        /* Pages */
+        .page { display: none; animation: fadeIn 0.3s ease; }
+        .page.active { display: block; }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* Product Image Placeholder */
+        .product-img {
+            background: linear-gradient(135deg, #333 0%, #1a1a1a 100%);
+            height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #555;
+            font-size: 3rem;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+            position: relative;
+            overflow: hidden;
+        }
+        .product-img::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(45deg, transparent 40%, rgba(255,255,255,0.05) 50%, transparent 60%);
+            background-size: 200% 200%;
+            animation: shimmer 2s infinite;
+        }
+        @keyframes shimmer { 0% { background-position: -200% -200%; } 100% { background-position: 200% 200%; } }
+
+        /* Badge */
+        .badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            text-transform: uppercase;
+            z-index: 10;
+        }
+        .badge-new { background: var(--accent); color: white; }
+        .badge-sale { background: var(--danger); color: white; }
+
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            right: -400px;
+            width: 100%;
+            max-width: 400px;
+            height: 100vh;
+            background: var(--bg-card);
+            border-left: 1px solid var(--border);
+            z-index: 100;
+            transition: right 0.3s ease;
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar.open { right: 0; }
+        .sidebar-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 99;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+        .sidebar-overlay.open { opacity: 1; pointer-events: auto; }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 150;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+        .modal-overlay.active { display: flex; }
+
+        /* Star Rating */
+        .star { color: #333; cursor: pointer; transition: color 0.2s; }
+        .star.active, .star:hover { color: #fbbf24; }
+
+        /* Payment Animation */
+        .payment-success {
+            animation: scaleIn 0.5s ease forwards;
+        }
+        @keyframes scaleIn {
+            0% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Header -->
+    <header class="sticky top-0 z-50 border-b border-[var(--border)] bg-[var(--bg)]/95 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-8">
+                <h1 class="text-xl font-bold tracking-tight cursor-pointer" onclick="router.navigate('home')">
+                    <span style="color: var(--accent)">Nex</span>Store
+                </h1>
+                <nav class="hidden md:flex items-center gap-6 text-sm text-[var(--fg-muted)]">
+                    <a href="#" onclick="router.navigate('home')" class="hover:text-white transition-colors">Shop</a>
+                    <a href="#" onclick="router.navigate('orders')" class="hover:text-white transition-colors">Orders</a>
+                    <a href="#" onclick="router.navigate('admin')" class="hover:text-white transition-colors">Admin</a>
+                </nav>
+            </div>
+
+            <div class="flex items-center gap-4">
+                <div class="relative hidden sm:block">
+                    <input type="text" id="searchInput" placeholder="Search products..." 
+                           class="input-field w-64 py-2 text-sm" onkeyup="app.handleSearch(this.value)">
+                    <svg class="absolute right-3 top-1/2 -translate-y-1/2 text-[var(--fg-muted)]" width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                    </svg>
+                </div>
+
+                <button onclick="app.toggleWishlist()" class="relative p-2 hover:bg-[var(--bg-elevated)] rounded-lg transition-colors">
+                    <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                    </svg>
+                    <span id="wishlistCount" class="absolute -top-1 -right-1 w-4 h-4 bg-[var(--accent)] text-white text-[10px] rounded-full flex items-center justify-center font-bold">0</span>
+                </button>
+
+                <button onclick="app.toggleCart()" class="relative p-2 hover:bg-[var(--bg-elevated)] rounded-lg transition-colors">
+                    <svg width="22" height="22" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"/>
+                    </svg>
+                    <span id="cartCount" class="absolute -top-1 -right-1 w-4 h-4 bg-[var(--accent)] text-white text-[10px] rounded-full flex items-center justify-center font-bold">0</span>
+                </button>
+
+                <button onclick="app.handleAuthClick()" id="authBtn" class="btn-primary text-sm py-2 hidden sm:block">
+                    Login
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 py-8">
+        
+        <!-- HOME PAGE -->
+        <div id="page-home" class="page active">
+            <!-- Hero -->
+            <div class="relative rounded-2xl overflow-hidden mb-12 p-8 md:p-12" style="background: linear-gradient(135deg, #1a1a1a 0%, #0a0a0a 100%); border: 1px solid var(--border);">
+                <div class="relative z-10 max-w-xl">
+                    <span class="inline-block px-3 py-1 rounded-full text-xs font-medium bg-[var(--accent-dim)] text-[var(--accent)] mb-4">New Season Arrivals</span>
+                    <h2 class="text-4xl md:text-5xl font-bold mb-4 leading-tight">The Future of <br>Tech Shopping</h2>
+                    <p class="text-[var(--fg-muted)] mb-6">Discover the latest gadgets and electronics with unmatched prices and fast delivery.</p>
+                    <button class="btn-primary px-8">Explore Collection</button>
+                </div>
+                <div class="absolute right-0 top-0 bottom-0 w-1/2 opacity-20" style="background: radial-gradient(circle at center, var(--accent) 0%, transparent 70%);"></div>
+            </div>
+
+            <!-- Filters -->
+            <div class="flex flex-col md:flex-row gap-4 mb-8">
+                <select id="categoryFilter" onchange="app.filterProducts()" class="input-field w-full md:w-48">
+                    <option value="">All Categories</option>
+                    <option value="Audio">Audio</option>
+                    <option value="Wearables">Wearables</option>
+                    <option value="Phones">Phones</option>
+                    <option value="Gaming">Gaming</option>
+                </select>
+                <select id="priceFilter" onchange="app.filterProducts()" class="input-field w-full md:w-48">
+                    <option value="">All Prices</option>
+                    <option value="0-100">Under Rs 100</option>
+                    <option value="100-500">Rs 100 - Rs 500</option>
+                    <option value="500-1000">Rs 500 - Rs 1000</option>
+                    <option value="1000-9999">Rs 1000+</option>
+                </select>
+                <div class="flex gap-2 ml-auto">
+                    <button onclick="app.setView('grid')" class="p-2 border border-[var(--border)] rounded-lg hover:border-[var(--accent)] transition-colors">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+                    </button>
+                    <button onclick="app.setView('list')" class="p-2 border border-[var(--border)] rounded-lg hover:border-[var(--accent)] transition-colors">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Products Grid -->
+            <div id="productsGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"></div>
+        </div>
+
+        <!-- ORDERS PAGE -->
+        <div id="page-orders" class="page">
+            <h2 class="text-2xl font-bold mb-8">Order History</h2>
+            <div id="ordersList" class="space-y-6"></div>
+        </div>
+
+        <!-- ADMIN PAGE -->
+        <div id="page-admin" class="page">
+            <div class="flex items-center justify-between mb-8">
+                <h2 class="text-2xl font-bold">Admin Dashboard</h2>
+                <button onclick="app.openProductModal()" class="btn-primary">Add Product</button>
+            </div>
+
+            <!-- Stats -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+                <div class="card p-5">
+                    <p class="text-[var(--fg-muted)] text-sm mb-1">Total Sales</p>
+                    <p class="text-2xl font-bold">Rs 24,500</p>
+                </div>
+                <div class="card p-5">
+                    <p class="text-[var(--fg-muted)] text-sm mb-1">Orders</p>
+                    <p class="text-2xl font-bold">142</p>
+                </div>
+                <div class="card p-5">
+                    <p class="text-[var(--fg-muted)] text-sm mb-1">Products</p>
+                    <p id="productCountStat" class="text-2xl font-bold">0</p>
+                </div>
+                <div class="card p-5">
+                    <p class="text-[var(--fg-muted)] text-sm mb-1">Users</p>
+                    <p class="text-2xl font-bold">1,205</p>
+                </div>
+            </div>
+
+            <!-- Admin Products Table -->
+            <div class="card overflow-hidden">
+                <table class="w-full">
+                    <thead class="bg-[var(--bg-elevated)]">
+                        <tr class="text-left text-sm text-[var(--fg-muted)]">
+                            <th class="p-4 font-medium">Product</th>
+                            <th class="p-4 font-medium">Category</th>
+                            <th class="p-4 font-medium">Price</th>
+                            <th class="p-4 font-medium">Stock</th>
+                            <th class="p-4 font-medium">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="adminProductTable"></tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- Cart Sidebar -->
+    <div id="cartOverlay" class="sidebar-overlay" onclick="app.toggleCart()"></div>
+    <div id="cartSidebar" class="sidebar">
+        <div class="p-6 border-b border-[var(--border)] flex items-center justify-between">
+            <h3 class="text-lg font-bold">Shopping Cart</h3>
+            <button onclick="app.toggleCart()" class="p-2 hover:bg-[var(--bg-elevated)] rounded-lg">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <div class="flex-1 overflow-y-auto p-6" id="cartItems">
+            <!-- Items go here -->
+        </div>
+        <div class="p-6 border-t border-[var(--border)] bg-[var(--bg-elevated)]">
+            <div class="flex justify-between mb-4">
+                <span class="text-[var(--fg-muted)]">Subtotal</span>
+                <span id="cartTotal" class="font-bold text-xl">Rs 0.00</span>
+            </div>
+            <button onclick="app.checkout()" class="btn-primary w-full text-center block">Proceed to Checkout</button>
+        </div>
+    </div>
+
+    <!-- Wishlist Sidebar -->
+    <div id="wishlistOverlay" class="sidebar-overlay" onclick="app.toggleWishlist()"></div>
+    <div id="wishlistSidebar" class="sidebar">
+        <div class="p-6 border-b border-[var(--border)] flex items-center justify-between">
+            <h3 class="text-lg font-bold">Wishlist</h3>
+            <button onclick="app.toggleWishlist()" class="p-2 hover:bg-[var(--bg-elevated)] rounded-lg">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+        </div>
+        <div class="flex-1 overflow-y-auto p-6" id="wishlistItems"></div>
+    </div>
+
+    <!-- Product Modal (Admin) -->
+    <div id="productModal" class="modal-overlay">
+        <div class="card max-w-lg w-full mx-4 p-6 relative">
+            <button onclick="app.closeProductModal()" class="absolute top-4 right-4 p-2 text-[var(--fg-muted)] hover:text-white">
+                <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
+            <h3 id="modalTitle" class="text-xl font-bold mb-6">Add Product</h3>
+            <form onsubmit="app.saveProduct(event)" class="space-y-4">
+                <input type="hidden" id="productId">
+                <div>
+                    <label class="text-sm text-[var(--fg-muted)] mb-1 block">Name</label>
+                    <input type="text" id="productName" class="input-field" required>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="text-sm text-[var(--fg-muted)] mb-1 block">Price</label>
+                        <input type="number" id="productPrice" class="input-field" step="0.01" required>
+                    </div>
+                    <div>
+                        <label class="text-sm text-[var(--fg-muted)] mb-1 block">Category</label>
+                        <select id="productCategory" class="input-field">
+                            <option>Audio</option>
+                            <option>Wearables</option>
+                            <option>Phones</option>
+                            <option>Gaming</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label class="text-sm text-[var(--fg-muted)] mb-1 block">Image URL (optional)</label>
+                    <input type="text" id="productImage" class="input-field" placeholder="https://...">
+                </div>
+                <div>
+                    <label class="text-sm text-[var(--fg-muted)] mb-1 block">Description</label>
+                    <textarea id="productDesc" class="input-field h-24 resize-none"></textarea>
+                </div>
+                <div class="flex gap-3 pt-4">
+                    <button type="button" onclick="app.closeProductModal()" class="btn-secondary flex-1">Cancel</button>
+                    <button type="submit" class="btn-primary flex-1">Save Product</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Payment Processing Modal -->
+    <div id="paymentModal" class="modal-overlay">
+        <div class="card max-w-md w-full mx-4 p-8 text-center">
+            <div id="paymentProcessing">
+                <div class="w-16 h-16 border-4 border-[var(--accent)] border-t-transparent rounded-full animate-spin mx-auto mb-6"></div>
+                <h3 class="text-xl font-bold mb-2">Processing Payment</h3>
+                <p class="text-[var(--fg-muted)]">Please wait while we confirm your transaction...</p>
+            </div>
+            <div id="paymentSuccess" class="hidden">
+                <div class="w-20 h-20 rounded-full bg-[var(--success)] mx-auto mb-6 flex items-center justify-center payment-success">
+                    <svg width="40" height="40" fill="none" stroke="white" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/></svg>
+                </div>
+                <h3 class="text-xl font-bold mb-2">Payment Successful!</h3>
+                <p class="text-[var(--fg-muted)] mb-6">Your order has been placed successfully.</p>
+                <button onclick="app.closePaymentModal()" class="btn-primary w-full">Continue Shopping</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Auth Modal -->
+    <div id="authModal" class="modal-overlay">
+        <div class="card max-w-sm w-full mx-4 p-8">
+            <h3 class="text-xl font-bold mb-6 text-center">Welcome Back</h3>
+            <form onsubmit="app.handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="text-sm text-[var(--fg-muted)] mb-1 block">Email</label>
+                    <input type="email" id="loginEmail" class="input-field" placeholder="demo@nexstore.com" value="demo@nexstore.com">
+                </div>
+                <div>
+                    <label class="text-sm text-[var(--fg-muted)] mb-1 block">Password</label>
+                    <input type="password" id="loginPassword" class="input-field" value="password">
+                </div>
+                <button type="submit" class="btn-primary w-full mt-2">Sign In</button>
+            </form>
+            <p class="text-center text-xs text-[var(--fg-muted)] mt-4">Demo credentials pre-filled. Click Sign In.</p>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // BACKEND SIMULATION (Node/Mongo Logic)
+        // ==========================================
+        
+        // Simulating MongoDB Collections
+        const DB = {
+            products: [
+                { id: 1, name: "Quantum Pro Earbuds", price: 199, category: "Audio", image: "", description: "Premium noise cancelling earbuds", stock: 45, rating: 4.5, badge: "new" },
+                { id: 2, name: "Smart Watch Ultra", price: 499, category: "Wearables", image: "", description: "Advanced health monitoring smartwatch", stock: 23, rating: 4.8, badge: "" },
+                { id: 3, name: "Phantom X Phone", price: 999, category: "Phones", image: "", description: "Next-gen flagship smartphone", stock: 12, rating: 4.7, badge: "sale" },
+                { id: 4, name: "VR Gaming Headset", price: 349, category: "Gaming", image: "", description: "Immersive virtual reality experience", stock: 34, rating: 4.3, badge: "" },
+                { id: 5, name: "Wireless Speaker Max", price: 129, category: "Audio", image: "", description: "360° room filling sound", stock: 67, rating: 4.2, badge: "" },
+                { id: 6, name: "Fitness Band Lite", price: 79, category: "Wearables", image: "", description: "Lightweight fitness tracker", stock: 89, rating: 4.0, badge: "new" },
+                { id: 7, name: "Gaming Console Pro", price: 549, category: "Gaming", image: "", description: "4K gaming at 120fps", stock: 8, rating: 4.9, badge: "sale" },
+                { id: 8, name: "Studio Headphones", price: 299, category: "Audio", image: "", description: "Professional studio quality sound", stock: 31, rating: 4.6, badge: "" }
+            ],
+            users: [
+                { id: 1, email: "demo@nexstore.com", name: "Demo User", password: "password" }
+            ],
+            orders: [
+                { id: 1001, userId: 1, items: [{name: "Quantum Pro Earbuds", qty: 1, price: 199}], total: 199, status: "Delivered", date: "2023-10-15" },
+                { id: 1002, userId: 1, items: [{name: "Smart Watch Ultra", qty: 1, price: 499}], total: 499, status: "Shipped", date: "2023-10-28" }
+            ]
+        };
+
+        // API Service (Simulating Node.js Routes)
+        class APIService {
+            // GET /api/products
+            getProducts(filters = {}) {
+                let result = [...DB.products];
+                if (filters.category) result = result.filter(p => p.category === filters.category);
+                if (filters.search) result = result.filter(p => p.name.toLowerCase().includes(filters.search.toLowerCase()));
+                if (filters.price) {
+                    const [min, max] = filters.price.split('-').map(Number);
+                    result = result.filter(p => p.price >= min && p.price <= max);
+                }
+                return result;
+            }
+
+            // POST /api/products (Admin)
+            addProduct(product) {
+                const newProduct = { ...product, id: Date.now(), rating: 0, badge: "" };
+                DB.products.push(newProduct);
+                return newProduct;
+            }
+
+            // PUT /api/products/:id (Admin)
+            updateProduct(id, updates) {
+                const index = DB.products.findIndex(p => p.id == id);
+                if (index !== -1) {
+                    DB.products[index] = { ...DB.products[index], ...updates };
+                    return DB.products[index];
+                }
+                return null;
+            }
+
+            // DELETE /api/products/:id (Admin)
+            deleteProduct(id) {
+                DB.products = DB.products.filter(p => p.id !== id);
+                return { success: true };
+            }
+
+            // POST /api/orders
+            createOrder(userId, items, total) {
+                const newOrder = {
+                    id: Date.now(),
+                    userId,
+                    items,
+                    total,
+                    status: "Processing",
+                    date: new Date().toISOString().split('T')[0]
+                };
+                DB.orders.push(newOrder);
+                return newOrder;
+            }
+
+            // GET /api/orders/:userId
+            getOrders(userId) {
+                return DB.orders.filter(o => o.userId === userId);
+            }
+
+            // POST /api/auth/login
+            login(email, password) {
+                return DB.users.find(u => u.email === email && u.password === password) || null;
+            }
+        }
+
+        const api = new APIService();
+
+        // ==========================================
+        // FRONTEND APPLICATION (Angular-like Logic)
+        // ==========================================
+
+        class App {
+            constructor() {
+                this.cart = JSON.parse(localStorage.getItem('cart') || '[]');
+                this.wishlist = JSON.parse(localStorage.getItem('wishlist') || '[]');
+                this.user = JSON.parse(localStorage.getItem('user') || 'null');
+                this.currentView = 'grid';
+                this.init();
+            }
+
+            init() {
+                this.renderProducts();
+                this.updateCounts();
+                this.updateAuthUI();
+                this.renderCart();
+                this.renderWishlist();
+                this.renderOrders();
+                this.renderAdminTable();
+            }
+
+            // --- Product Rendering ---
+            renderProducts(products = null) {
+                const grid = document.getElementById('productsGrid');
+                if (!products) products = api.getProducts();
+                
+                grid.innerHTML = products.map(p => `
+                    <div class="card overflow-hidden group">
+                        <div class="product-img">
+                            ${p.badge ? `<span class="badge badge-${p.badge}">${p.badge}</span>` : ''}
+                            ${p.image ? `<img src="${p.image}" class="w-full h-full object-cover absolute inset-0">` : 
+                            `<span class="text-4xl opacity-20">${this.getIcon(p.category)}</span>`}
+                        </div>
+                        <div class="p-4">
+                            <p class="text-xs text-[var(--fg-muted)] uppercase tracking-wider mb-1">${p.category}</p>
+                            <h4 class="font-semibold mb-1 truncate">${p.name}</h4>
+                            <div class="flex items-center gap-1 mb-2">
+                                ${this.renderStars(p.rating)}
+                                <span class="text-xs text-[var(--fg-muted)] ml-1">(${p.rating})</span>
+                            </div>
+                            <div class="flex items-center justify-between">
+                                <span class="text-lg font-bold" style="color: var(--accent)">Rs${p.price}</span>
+                                <div class="flex gap-1">
+                                    <button onclick="app.toggleWishlistItem(${p.id})" class="p-2 rounded-lg hover:bg-[var(--bg-elevated)] transition-colors ${this.wishlist.includes(p.id) ? 'text-[var(--danger)]' : 'text-[var(--fg-muted)]'}">
+                                        <svg width="18" height="18" fill="${this.wishlist.includes(p.id) ? 'currentColor' : 'none'}" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+                                    </button>
+                                    <button onclick="app.addToCart(${p.id})" class="p-2 rounded-lg bg-[var(--accent)] text-white hover:opacity-80 transition-colors">
+                                        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+                
+                document.getElementById('productCountStat').innerText = DB.products.length;
+            }
+
+            getIcon(cat) {
+                const icons = { Audio: '🎧', Wearables: '⌚', Phones: '📱', Gaming: '🎮' };
+                return icons[cat] || '📦';
+            }
+
+            renderStars(r) {
+                let s = '';
+                for(let i=1; i<=5; i++) s += `<span class="star ${i <= r ? 'active' : ''}">★</span>`;
+                return s;
+            }
+
+            filterProducts() {
+                const cat = document.getElementById('categoryFilter').value;
+                const price = document.getElementById('priceFilter').value;
+                const search = document.getElementById('searchInput').value;
+                this.renderProducts(api.getProducts({ category: cat, price, search }));
+            }
+
+            handleSearch(val) {
+                this.filterProducts();
+            }
+
+            setView(type) {
+                // Logic to switch between grid/list view can be expanded
+            }
+
+            // --- Cart Logic ---
+            addToCart(id) {
+                const existing = this.cart.find(i => i.id === id);
+                if (existing) existing.qty++;
+                else this.cart.push({ id, qty: 1 });
+                this.saveCart();
+                this.renderCart();
+                this.updateCounts();
+                this.showNotification("Added to cart");
+            }
+
+            removeFromCart(id) {
+                this.cart = this.cart.filter(i => i.id !== id);
+                this.saveCart();
+                this.renderCart();
+                this.updateCounts();
+            }
+
+            updateQty(id, change) {
+                const item = this.cart.find(i => i.id === id);
+                if (item) {
+                    item.qty += change;
+                    if (item.qty <= 0) this.removeFromCart(id);
+                    else { this.saveCart(); this.renderCart(); this.updateCounts(); }
+                }
+            }
+
+            saveCart() {
+                localStorage.setItem('cart', JSON.stringify(this.cart));
+            }
+
+            renderCart() {
+                const container = document.getElementById('cartItems');
+                if (this.cart.length === 0) {
+                    container.innerHTML = `<div class="text-center py-10 text-[var(--fg-muted)]">Your cart is empty</div>`;
+                } else {
+                    let total = 0;
+                    container.innerHTML = this.cart.map(item => {
+                        const product = DB.products.find(p => p.id === item.id);
+                        if(!product) return '';
+                        total += product.price * item.qty;
+                        return `
+                            <div class="flex gap-4 mb-4 pb-4 border-b border-[var(--border)]">
+                                <div class="w-16 h-16 rounded-lg bg-[var(--bg)] flex items-center justify-center text-xl">
+                                    ${this.getIcon(product.category)}
+                                </div>
+                                <div class="flex-1">
+                                    <h4 class="font-medium text-sm">${product.name}</h4>
+                                    <p class="text-sm text-[var(--fg-muted)]">$${product.price}</p>
+                                    <div class="flex items-center gap-2 mt-1">
+                                        <button onclick="app.updateQty(${item.id}, -1)" class="w-6 h-6 rounded bg-[var(--bg-elevated)] text-xs">-</button>
+                                        <span class="text-sm w-4 text-center">${item.qty}</span>
+                                        <button onclick="app.updateQty(${item.id}, 1)" class="w-6 h-6 rounded bg-[var(--bg-elevated)] text-xs">+</button>
+                                    </div>
+                                </div>
+                                <button onclick="app.removeFromCart(${item.id})" class="text-[var(--fg-muted)] hover:text-[var(--danger)]">
+                                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                </button>
+                            </div>
+                        `;
+                    }).join('');
+                    document.getElementById('cartTotal').innerText = `Rs ${total.toFixed(2)}`;
+                }
+            }
+
+            toggleCart() {
+                document.getElementById('cartSidebar').classList.toggle('open');
+                document.getElementById('cartOverlay').classList.toggle('open');
+            }
+
+            // --- Wishlist Logic ---
+            toggleWishlistItem(id) {
+                if (this.wishlist.includes(id)) {
+                    this.wishlist = this.wishlist.filter(i => i !== id);
+                    this.showNotification("Removed from wishlist");
+                } else {
+                    this.wishlist.push(id);
+                    this.showNotification("Added to wishlist");
+                }
+                localStorage.setItem('wishlist', JSON.stringify(this.wishlist));
+                this.renderProducts(); // Re-render to update icons
+                this.renderWishlist();
+                this.updateCounts();
+            }
+
+            renderWishlist() {
+                const container = document.getElementById('wishlistItems');
+                if (this.wishlist.length === 0) {
+                    container.innerHTML = `<div class="text-center py-10 text-[var(--fg-muted)]">Your wishlist is empty</div>`;
+                } else {
+                    container.innerHTML = this.wishlist.map(id => {
+                        const product = DB.products.find(p => p.id === id);
+                        if(!product) return '';
+                        return `
+                            <div class="flex gap-4 mb-4 pb-4 border-b border-[var(--border)]">
+                                <div class="w-16 h-16 rounded-lg bg-[var(--bg)] flex items-center justify-center text-xl">
+                                    ${this.getIcon(product.category)}
+                                </div>
+                                <div class="flex-1">
+                                    <h4 class="font-medium text-sm">${product.name}</h4>
+                                    <p class="text-sm font-bold" style="color: var(--accent)">$${product.price}</p>
+                                </div>
+                                <button onclick="app.addToCart(${product.id}); app.toggleWishlistItem(${product.id});" class="btn-primary text-xs py-1 px-2 h-fit">Add</button>
+                            </div>
+                        `;
+                    }).join('');
+                }
+            }
+
+            toggleWishlist() {
+                document.getElementById('wishlistSidebar').classList.toggle('open');
+                document.getElementById('wishlistOverlay').classList.toggle('open');
+            }
+
+            updateCounts() {
+                const cartCount = this.cart.reduce((sum, item) => sum + item.qty, 0);
+                document.getElementById('cartCount').innerText = cartCount;
+                document.getElementById('wishlistCount').innerText = this.wishlist.length;
+            }
+
+            // --- Checkout & Payment ---
+            checkout() {
+                if (this.cart.length === 0) return;
+                if (!this.user) {
+                    this.toggleCart();
+                    document.getElementById('authModal').classList.add('active');
+                    return;
+                }
+                
+                this.toggleCart();
+                document.getElementById('paymentModal').classList.add('active');
+                document.getElementById('paymentProcessing').classList.remove('hidden');
+                document.getElementById('paymentSuccess').classList.add('hidden');
+
+                // Simulate Stripe/Razorpay API call
+                setTimeout(() => {
+                    const items = this.cart.map(c => {
+                        const p = DB.products.find(pr => pr.id === c.id);
+                        return { name: p.name, qty: c.qty, price: p.price };
+                    });
+                    const total = items.reduce((sum, i) => sum + (i.price * i.qty), 0);
+                    
+                    api.createOrder(this.user.id, items, total);
+                    this.cart = [];
+                    this.saveCart();
+                    this.renderCart();
+                    this.updateCounts();
+                    this.renderOrders();
+
+                    document.getElementById('paymentProcessing').classList.add('hidden');
+                    document.getElementById('paymentSuccess').classList.remove('hidden');
+                }, 2500);
+            }
+
+            closePaymentModal() {
+                document.getElementById('paymentModal').classList.remove('active');
+            }
+
+            // --- Orders ---
+            renderOrders() {
+                const container = document.getElementById('ordersList');
+                const orders = api.getOrders(1); // Hardcoded user 1 for demo
+                if (orders.length === 0) {
+                    container.innerHTML = `<div class="card p-10 text-center text-[var(--fg-muted)]">No orders yet</div>`;
+                } else {
+                    container.innerHTML = orders.sort((a,b) => b.id - a.id).map(o => `
+                        <div class="card p-6">
+                            <div class="flex flex-wrap items-center justify-between gap-4 mb-4 pb-4 border-b border-[var(--border)]">
+                                <div>
+                                    <span class="text-xs text-[var(--fg-muted)]">Order #${o.id}</span>
+                                    <h4 class="font-bold">${o.date}</h4>
+                                </div>
+                                <span class="status-badge ${o.status === 'Delivered' ? 'bg-[var(--success)]/20 text-[var(--success)]' : 'bg-[var(--warning)]/20 text-[var(--warning)]'}">
+                                    ${o.status}
+                                </span>
+                            </div>
+                            <div class="space-y-2">
+                                ${o.items.map(i => `
+                                    <div class="flex justify-between text-sm">
+                                        <span>${i.name} x ${i.qty}</span>
+                                        <span class="font-medium">$${(i.price * i.qty).toFixed(2)}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            <div class="flex justify-between mt-4 pt-4 border-t border-[var(--border)]">
+                                <span class="font-bold">Total</span>
+                                <span class="font-bold text-lg" style="color: var(--accent)">Rs ${o.total.toFixed(2)}</span>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            }
+
+            // --- Admin ---
+            renderAdminTable() {
+                const tbody = document.getElementById('adminProductTable');
+                tbody.innerHTML = DB.products.map(p => `
+                    <tr class="border-b border-[var(--border)] hover:bg-[var(--bg-elevated)]">
+                        <td class="p-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded bg-[var(--bg)] flex items-center justify-center">
+                                    ${this.getIcon(p.category)}
+                                </div>
+                                <span class="font-medium">${p.name}</span>
+                            </div>
+                        </td>
+                        <td class="p-4 text-[var(--fg-muted)]">${p.category}</td>
+                        <td class="p-4">Rs ${p.price}</td>
+                        <td class="p-4">${p.stock}</td>
+                        <td class="p-4">
+                            <button onclick="app.editProduct(${p.id})" class="text-[var(--accent)] hover:underline text-sm mr-2">Edit</button>
+                            <button onclick="app.deleteProduct(${p.id})" class="text-[var(--danger)] hover:underline text-sm">Delete</button>
+                        </td>
+                    </tr>
+                `).join('');
+            }
+
+            openProductModal(id = null) {
+                document.getElementById('productModal').classList.add('active');
+                document.getElementById('modalTitle').innerText = id ? 'Edit Product' : 'Add Product';
+                
+                if (id) {
+                    const p = DB.products.find(p => p.id === id);
+                    document.getElementById('productId').value = p.id;
+                    document.getElementById('productName').value = p.name;
+                    document.getElementById('productPrice').value = p.price;
+                    document.getElementById('productCategory').value = p.category;
+                    document.getElementById('productDesc').value = p.description;
+                } else {
+                    document.getElementById('productId').value = '';
+                    document.querySelector('#productModal form').reset();
+                }
+            }
+
+            closeProductModal() {
+                document.getElementById('productModal').classList.remove('active');
+            }
+
+            saveProduct(e) {
+                e.preventDefault();
+                const id = document.getElementById('productId').value;
+                const data = {
+                    name: document.getElementById('productName').value,
+                    price: parseFloat(document.getElementById('productPrice').value),
+                    category: document.getElementById('productCategory').value,
+                    description: document.getElementById('productDesc').value,
+                    stock: 10 // default
+                };
+
+                if (id) {
+                    api.updateProduct(id, data);
+                } else {
+                    api.addProduct(data);
+                }
+                
+                this.closeProductModal();
+                this.renderProducts();
+                this.renderAdminTable();
+            }
+
+            editProduct(id) {
+                this.openProductModal(id);
+            }
+
+            deleteProduct(id) {
+                if(confirm('Are you sure?')) {
+                    api.deleteProduct(id);
+                    this.renderProducts();
+                    this.renderAdminTable();
+                }
+            }
+
+            // --- Auth ---
+            handleAuthClick() {
+                if (this.user) {
+                    this.user = null;
+                    localStorage.removeItem('user');
+                    this.updateAuthUI();
+                    this.showNotification("Logged out");
+                } else {
+                    document.getElementById('authModal').classList.add('active');
+                }
+            }
+
+            handleLogin(e) {
+                e.preventDefault();
+                const email = document.getElementById('loginEmail').value;
+                const pass = document.getElementById('loginPassword').value;
+                const user = api.login(email, pass);
+                
+                if (user) {
+                    this.user = { id: user.id, name: user.name, email: user.email };
+                    localStorage.setItem('user', JSON.stringify(this.user));
+                    document.getElementById('authModal').classList.remove('active');
+                    this.updateAuthUI();
+                    this.showNotification(`Welcome back, ${user.name}!`);
+                    this.renderOrders();
+                } else {
+                    alert("Invalid credentials");
+                }
+            }
+
+            updateAuthUI() {
+                const btn = document.getElementById('authBtn');
+                if (this.user) {
+                    btn.innerText = "Logout";
+                } else {
+                    btn.innerText = "Login";
+                }
+            }
+
+            showNotification(msg) {
+                // Simple notification logic
+                const el = document.createElement('div');
+                el.className = 'fixed bottom-4 right-4 bg-[var(--accent)] text-white px-4 py-2 rounded-lg shadow-lg z-[200] animate-pulse';
+                el.innerText = msg;
+                document.body.appendChild(el);
+                setTimeout(() => el.remove(), 2000);
+            }
+        }
+
+        // Router Simple
+        const router = {
+            navigate: (page) => {
+                document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+                document.getElementById('page-' + page).classList.add('active');
+            }
+        };
+
+        const app = new App();
+    </script>
+</body>
+</html>
