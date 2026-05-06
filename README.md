@@ -4,17 +4,6 @@
 Modern full-stack e-commerce platform built using Angular, TypeScript, Node.js, and MongoDB.
 
 ---
-
-echo "# nexstore-saas" >> README.md
-git init
-git add README.md
-git commit -m "first commit"
-git branch -M main
-git remote add origin https://github.com/Manisha1218/nexstore-saas.git
-git push -u origin main
-
-
-
 ## 🌟 Features
 
 ✅ Real-time Product Filtering  
